@@ -5,8 +5,15 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Robot extends TimedRobot {
+
+    private final SpindexSubsystem spindexer = new SpindexSubsystem();
+
+    public Robot() {
+        SmartDashboard.putData("Spindexer", spindexer);
+    }
 
     @Override
     public void robotInit() {}

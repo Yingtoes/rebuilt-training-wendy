@@ -72,5 +72,5 @@
   "redhat.telemetry.enabled": false,
   "wpilib.skipSelectSimulateExtension": true,
   "java.compile.nullAnalysis.mode": "disabled",
-  "chat.disableAIFeatures": true
+  "chat.disableAIFeatures": false
 }
