@@ -1,6 +1,5 @@
 package frc.robot.intake;
 
-import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotations;
 
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
@@ -14,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 public class IntakeSubsystem extends SubsystemBase {
     public TalonFX deployMotor = new TalonFX(IntakeConst.DEPLOY_MOTOR_ID);
     public TalonFX rollerMotor = new TalonFX(IntakeConst.ROLLER_MOTOR_ID);
+    private Angle targetAngle;
 
     public IntakeSubsystem() {
         deployMotor.getConfigurator().apply(IntakeConfig.deployMotorConfig);
@@ -51,7 +51,7 @@ public class IntakeSubsystem extends SubsystemBase {
      * @param angle
      */
     public void moveAngle(Angle angle) {
-        Angle targetAngle =
+        targetAngle =
                 Rotations.of(
                         MathUtil.clamp(
                                 angle.in(Rotations),
@@ -89,9 +89,10 @@ public class IntakeSubsystem extends SubsystemBase {
 
     @Override
     public void initSendable(SendableBuilder builder) {
+        builder.addDoubleProperty("angle (deg)", () -> getCurrAngle().in(Rotations), null);
         builder.addDoubleProperty(
-                "angle (deg)",
-                () -> getCurrAngle().in(Rotations),
-                (angle) -> moveAngle(Degrees.of(angle)));
+                "target angle(rotation)",
+                () -> targetAngle.in(Rotations),
+                (angle) -> moveAngle(Rotations.of(angle)));
     }
 }
