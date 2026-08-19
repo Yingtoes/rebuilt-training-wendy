@@ -11,7 +11,7 @@ import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class HoodSubsystem extends SubsystemBase {
-    public TalonFX motor = new TalonFX(HoodConst.MOTOR_ID);
+    public TalonFX motor = new TalonFX(HoodConst.MOTOR_ID, HoodConst.LAUNCHER_CANBUS);
     private Angle targetPitch;
 
     public HoodSubsystem() {

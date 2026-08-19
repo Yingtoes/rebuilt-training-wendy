@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.feeder.FeederSubsystem;
 import frc.robot.hood.HoodSubsystem;
 import frc.robot.intake.IntakeSubsystem;
+import frc.robot.shooter.ShooterSubsystem;
 import frc.robot.spindexer.SpindexSubsystem;
 
 public class Robot extends TimedRobot {
@@ -21,6 +22,7 @@ public class Robot extends TimedRobot {
     private final IntakeSubsystem intake = new IntakeSubsystem();
     private final FeederSubsystem feeder = new FeederSubsystem();
     private final HoodSubsystem hood = new HoodSubsystem();
+    private final ShooterSubsystem shooter = new ShooterSubsystem();
     private final CommandXboxController controller = new CommandXboxController(0);
 
     public Robot() {
@@ -33,6 +35,7 @@ public class Robot extends TimedRobot {
         SmartDashboard.putData("Intake", intake);
         SmartDashboard.putData("Feeder", feeder);
         SmartDashboard.putData("Hood", hood);
+        SmartDashboard.putData("Shooter", shooter);
     }
 
     public void initBindings() {
