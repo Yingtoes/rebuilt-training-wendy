@@ -658,7 +658,7 @@ If we forgot this line, then commands never get scheduled and never run.
 
 Then, add a new private, final field called `controller` initialized to a new `CommandXboxController` instance, passing in `0` (controller port) for the constructor argument.
 
-Then create a parameterless constructor for `Robot`, where we will put some bindings. We will bind holding the left bumper to run the spindexer.
+Our controller bindings will go in our `Robot.java` constructor. We will bind holding the left bumper to run the spindexer.
 
 The `controller` has methods for each control, that each return a `Trigger` object. Define a `Trigger` variable called `leftBumper` initialized to a `controller.leftBumper()` call.
 
@@ -804,7 +804,7 @@ Create the `intake` folder and the three files, `IntakeConfig.java`, `IntakeCons
 #### Subsystem Specifications
 <sub><sup>Mentors, explain what the intake subsystem is.</sup></sub>
 
-The intake deploy mechanism has a range of `128.26` degrees, where the lowest angle is parallel to the ground and the highest angle has a hard stop.
+The intake deploy mechanism has a range of `128.26` degrees, where the lowest angle is parallel to the ground (deployed) and the highest angle has a hard stop (stowed).
 
 The gear ratio between the deploy motor angle and the mechanism angle is probably `96`, but this had to be deduced empirically during testing since the provided design doc value was incorrect.
 
@@ -899,6 +899,8 @@ double numberDegrees = myAngle.in(Degrees);
 
 Some basic math operations are provided for `Angle`. You can use the `add()` method to add together two angles, and it will handle the unit conversions automatically. Similarly, you can write `myAngle.div(Seconds.of(1.0))`, which returns an `AngularVelocity` measure.
 
+The Units library methods you'll use most often are `.of()` and `in()`. In simple terms: `of()` takes in a `double` or `int` value and returns a measurement object (of the same value), and `in()` takes in a measurement object and returns a `double`, performing a conversion if necessary (specified by what unit you pass into the method).
+
 ##### Units Refactoring
 Convert your min angle and max angle constants to measure objects. Then fix their usages.
 
@@ -990,7 +992,7 @@ Just like with the spindexer, we want to be able to see information about the in
 
 Declare a new method to get the current angle of the intake.
 
-Since we are retrieving position instead of motor speed, we will be using the `getPosition()` method instead of `get()`. `getPosition()` will give us the motor's position as a `StatusSignal<Angle>`. This `StatusSignal` has two useful methods, `getValue()` (returns its `Angle` object) and `getValueAsDouble()` (returns its angle in rotation as a `double`.
+Since we are retrieving position instead of motor speed, we will be using the `getPosition()` method instead of `get()`. `getPosition()` will give us the motor's position as a `StatusSignal<Angle>`. This `StatusSignal` has two useful methods, `getValue()` (returns its `Angle` object) and `getValueAsDouble()` (returns its angle in rotation as a `double`). We want our method to return the current angle as an `Angle` object.
 
 Now we have to add this angle to the dashboard. Start by overriding the `initSendable` method in `IntakeSubsystem` (be sure to autocomplete with the suggestion).
 
@@ -1061,6 +1063,7 @@ From here, you can write the rest of `FeederSubsystem.java` on your own. It shou
   - Motor direction with intuitive convention (untuned)
 - Method to set motor speed
 - Methods to start, stop, brake, and reverse
+    - Hint: use `StaticBrake` and `CoastOut` `ControlRequest`s to adjust neutral behavior without reconfiguring the motor!
 - Method to get the current motor speed
 - Correctly initialized dashboard properties
 - Appropriate documentation and comments
@@ -1191,7 +1194,7 @@ new Follower(rightLeaderMotor.getDeviceID(), MotorAlignmentValue.Opposed));
 We call the `setControl()` method on a follower motor to specify how we want it to behave. The first parameter is the ID of the leader motor it should listen to, and the second dictates if it will spin in the same or opposite direction to its follower. In order to shoot fuel properly, the left motor will have to invert  the direction of the right (`MotorAlignmentValue.Opposed`).
 
 ##### Shooter Movement Methods
-To start, make a field to store the target angular velocity of the shooter subsystem at all times. The type is `AngularVelocity`.
+To start, make a field to store the target angular velocity of the shooter subsystem at all times. The type is `AngularVelocity`. Let's start by setting it to `70` rotations per second.
 
 Then, we need to make a method that sets the shooter motors to any desired velocity. Create a method called `moveAngularVelocity` that updates the value of `targetAngularVelocity` and sets the right leader motor to a specific speed (the left does not need to be set, it will mirror automatically). Ensure that the magnitude of this velocity is within the shooter's limitations (`MAX_ANGULAR_VELOCITY`).
 
@@ -1199,20 +1202,15 @@ Create a method `stop()` that stops the shooter motors and updates `targetVeloci
 
 We may want to be able to enable and disable the shooter independently of the rest of the launcher assembly, for testing purposes or streamlining commands. Underneath where you created the `targetAngularVelocity` field, add a field that can track whether the shooter subsystem is enabled or not.
 
+Create two methods, `enable()` and `disable()` that update this enabled value accordingly.
+
 In your `moveAngularVelocity()` method, add a check to see if the shooter subsystem is enabled. If it is disabled, prevent the motors from moving.
 
 Next, you'll want to make a getter method for the shooter's angular velocity. While we could use `motor.get()` to retrieve the speed as a fraction between `-1.0` and `1.0`, we want a more specific value so we can better test our shooter. For this, we can use the `getVelocity()` method in place of `get()`, which returns the motor's velocity in rotations per second (rps) instead. 
 
 Remember that `getVelocity()` returns a `StatusSymbol<AngularVelocity>` value that you'll have to convert into `AngularVelocity` with `getValue()`.
 
-Your method should look like this:
-```java
-public AngularVelocity getAngularVelocity() {
-return rightLeaderMotor.getVelocity().getValue();
-}
-```
-
-Add both the shooter's angular velocity (using `getAngularVelocity()`) and the recorded `targetAngularVelocity` into an `initSendable()` method. Remember to convert the values you pass in to rps using the Units library (`.in(RotationsPerSecond)`).
+Add both the shooter's angular velocity (using `getAngularVelocity()`) and the recorded `targetAngularVelocity` into an `initSendable()` method. Remember to convert the values you pass in from `AngularVelocity` objects to `double`s with Units library (`.in(RotationsPerSecond)`).
 
 The retrieved angular velocity should not have a setter passed in, but the target angular velocity field should. Use a lambda expression to pass an inputted angular velocity into the `moveAngularVelocity()` method.
 
@@ -1230,9 +1228,9 @@ Also add the `enabled` property to your `initSendable()`. You can do this with t
         builder.addBooleanProperty(
                 "enabled",
                 () -> enabled,
-                (enable) -> {
-                    if (enable) enabled = true;
-                    else enabled = false;
+                (enabled) -> {
+                    if (enabled) enable();
+                    else disable();
                 });
 ```
 </details>
@@ -1252,9 +1250,9 @@ In a separate `static` block, set two properties of your encoder configuration:
 `MagnetSensor.MagnetOffset` to the value `-0.444`. This represents the angular displacement between the encoder's true (mechanical) zero position and the one reported by the encoder itself.
 `MagnetSensor.SensorDirection` to an enum value of `SensorDirectionValue` (similar to the motor's `MotorOutput.Inverted` field, we will determine this in testing)
 
-Also enable and set forward/reverse limit switches for the turret motor.
+It's very important that we stay within the turret's mechanical limitations. The turret's minimum angle should be set to `-270` degrees, and its maximum to `180` degrees. Enable and set forward/reverse limit switches for the turret motor.
 
-Be sure to set a stow yaw for our turret (upon stow/startup) as a constant.
+Be sure to set a stow yaw for our turret (upon stow/startup) as a constant (the turret stows at its zero position).
 
 We will also need to store our *encoder to mechanism ratio* as a constant. This value is the number of encoder rotations recorded for every mechanism rotation, and will be useful for conversions. Set it to `8.5`.
 
@@ -1281,7 +1279,7 @@ Our first method will be called `moveRawYaw()`. Make sure to check that the turr
 
 In the method body, update `targetYaw` to the new setpoint. Remember to clamp the new value between the turret subsystem's `MIN_ANGLE` and `MAX_ANGLE`.
 
-After you update `targetYaw`, use a new `MotionMagicVoltage` request to move the turret motor. 
+After you update `targetYaw`, use a new `MotionMagicVoltage` request to move the turret motor.
 
 Use this `moveRawYaw()` method in a new method to stow the turret.
 
@@ -1344,11 +1342,11 @@ Let's start with a yaw error tolerance of `3` degrees. Save this value in your c
 In `TurretSubsystem.java`, create a method that compares the current yaw error with this value, and returns whether or not it is still within tolerance.
 
 Now we can start adding turret information to the dashboard. In a new `initSendable()` method, initialize the following properties:
-Turret status (enabled/disabled)
-Current yaw (all angles should be in degrees)
-Target yaw 
-Yaw error
-Whether or not the error is within tolerance
+- Turret status (enabled/disabled)
+- Current yaw (all angles should be in degrees)
+- Target yaw 
+- Yaw error
+- Whether or not the error is within tolerance
 
 <details><summary>Your final method should look like this:</summary>
 
@@ -1436,13 +1434,13 @@ In order to simplify our calculations, we will assume the effects of air resista
 
 To solve for launch speed, we'll be looking to relate what we know (vertical and horizontal distances from the launcher to the target) with what we're trying to find (launch speed). The easiest way we can do this is by writing an equation for this relationship, so let's go through how we'll set up the calculations!
 
-It will be much easier to solve for launch speed if we break it up into its horizontal and vertical components, v<sub>x</sub> and v<sub>y</sub>. Think of these components as the legs of a right triangle, with the combined velocity as the hypotenuse; using $\theta\ as our initial launch angle, we can write v<sub>x</sub> and v<sub>y</sub> as:
+It will be much easier to solve for launch speed if we break it up into its horizontal and vertical components, v<sub>x</sub> and v<sub>z</sub>. Think of these components as the legs of a right triangle, with the combined velocity as the hypotenuse; using $\theta\ as our initial launch angle, we can write v<sub>x</sub> and v<sub>z</sub> as:
 $$
 v_x = v\cos\theta \\
-v_y = v\sin\theta
+v_z = v\sin\theta
 $$
 
-Now that we've separated v into components, we can write separate motion equations for the horizontal and vertical movement of the fuel as it is launched towards the hub. For these equations, let x and y represent the horizontal and vertical displacement of the fuel in its path.
+Now that we've separated v into components, we can write separate motion equations for the horizontal and vertical movement of the fuel as it is launched towards the hub. For these equations, let d represent the horizontal displacement (in place of x) and h represent the vertical displacement of the fuel in its path (in place of y). We're using different letters so these values are not confused with the x and y definitons above (yaw calculations).
 
 Since we're ignoring air resistance, we can assume the fuel's horizontal velocity will remain constant. 
 
@@ -1453,11 +1451,11 @@ $$
 
 In our case, we can rewrite this definition as
 $$
-v_x = \frac{x}{t}
+v_x = \frac{d}{t}
 $$
 Where t represents the time the fuel has been in the air.
 
-Our equation for vertical motion will be more complicated, due to gravity exerting a constant acceleration downwards on the fuel. This means our vertical velocity component, v<sub>y</sub>, will be decreasing as the fuel travels through the air.
+Our equation for vertical motion will be more complicated, due to gravity exerting a constant acceleration downwards on the fuel. This means our vertical velocity component, v<sub>z</sub>, will be decreasing as the fuel travels through the air.
 
 We'll start with a well-known kinematics equation, something you might see in Honors or AP Physics. These equations are meant to model the motion of an object in terms of variables like its initial position, velocity, and acceleration. The equation we'll use looks like this:
 $$
@@ -1468,17 +1466,17 @@ displacement is how far the object has traveled from its starting point
 v<sub>0</sub> is the *initial velocity* (launch speed) of the object
 a is a constant *acceleration* being applied to the object
 t is the time elapsed since our object's release
-We want to rewrite this equation to fit our specific scenario. Our displacement will be the fuel's vertical displacement (y), our initial velocity will be the launch speed's vertical component (v<sub>y</sub>), and our acceleration will be the acceleration applied by gravity (g).
+We want to rewrite this equation to fit our specific scenario. Our displacement will be the fuel's vertical displacement (h), our initial velocity will be the launch speed's vertical component (v<sub>z</sub>), and our acceleration will be the acceleration applied by gravity (g).
 
 Rewriting the equation:
 $$
-y = v_yt + \frac{1}{2}gt^2
+h = v_zt + \frac{1}{2}gt^2
 $$
 
 Now we have two equations, each modeling the fuel's horizontal and vertical motion:
 $$
-v_x = \frac{x}{t}
-y = v_yt + \frac{1}{2}gt^2
+v_x = \frac{d}{t} \\
+h = v_zt + \frac{1}{2}gt^2
 $$
 
 You'll notice that, in both these equations, we have *two* unknown variables. This means we can't solve for launch speed using only one; we'll have to solve them as a system of equations.
@@ -1491,48 +1489,48 @@ In order to make an equation with only one unknown variable, we'll solve one of 
 
 Let's solve the horizontal motion equation for t:
 $$
-v_x = \frac{x}{t} \\
-(\text{multiply both sides by t})\implies tv_x = x \\
-(\text{divide both sides by }v_x)\implies t = \frac{x}{v_x}
+v_x = \frac{d}{t} \\
+(\text{multiply both sides by t})\implies tv_x = d \\
+(\text{divide both sides by }v_x)\implies t = \frac{d}{v_x}
 $$
 
 Now we can substitute this expression for t into our vertical motion equation:
 $$
-(\text{original equation})\implies y = v_yt + \frac{1}{2}gt^2 \\
-(\text{substitute in }t = \frac{x}{v_x})\implies y = v_y(\frac{x}{v_x}) + \frac{1}{2}g(\frac{x}{v_x})^2
+(\text{original equation})\implies h = v_zt + \frac{1}{2}gt^2 \\
+(\text{substitute in }t = \frac{d}{v_x})\implies h = v_z(\frac{d}{v_x}) + \frac{1}{2}g(\frac{d}{v_x})^2
 $$
 
-You'll notice that we still have two unknown variables, v<sub>x</sub> and v<sub>y</sub>. Luckily, both can be written in terms of v instead:
+You'll notice that we still have two unknown variables, v<sub>x</sub> and v<sub>z</sub>. Luckily, both can be written in terms of v instead:
 
 $$
 v_x = v\cos\theta \\
-v_y = v\sin\theta
+v_z = v\sin\theta
 $$
 
 Substituting these into our vertical motion equation:
 $$
-y = v_y(\frac{x}{v_x}) + \frac{1}{2}g(\frac{x}{v_x})^2 \\
-(\text{substitute in }v_x \text{ and }v_y)\implies y = (v\sin\theta)(\frac{x}{v\cos\theta}) + \frac{1}{2}g(\frac{x}{v\cos\theta})^2
+h = v_z(\frac{d}{v_x}) + \frac{1}{2}g(\frac{d}{v_x})^2 \\
+(\text{substitute in }v_x \text{ and }v_z)\implies h = (v\sin\theta)(\frac{d}{v\cos\theta}) + \frac{1}{2}g(\frac{d}{v\cos\theta})^2
 $$
 
 All we have to do now is simplify and solve for v!
 $$
-y = (v\sin\theta)(\frac{x}{v\cos\theta}) + \frac{1}{2}g(\frac{x}{v\cos\theta})^2 \\
-(\text{distribute})\implies y = \frac{x v\sin\theta}{v\cos\theta} + \frac{1}{2}g(\frac{x^2}{v^2\cos^2\theta}) \\
-(\text{distribute again})\implies y = \frac{x v\sin\theta}{v\cos\theta} + \frac{g x^2}{2v^2\cos^2\theta} \\
-(\text{cancel } v)\implies y = \frac{x \sin\theta}{\cos\theta} + \frac{g x^2}{2v^2\cos^2\theta} \\
-(\text{apply tan}\theta \text{ identity})\implies y = x\tan\theta + \frac{g x^2}{2v^2\cos^2\theta} \\
-(\text{isolate v on one side})\implies \frac{g x^2}{2v^2\cos^2\theta} = x\tan\theta - y \\
-(\text{solve for v})\implies gx^2 = 2v^2\cos^2\theta(x\tan\theta - y) \\
-\frac{gx^2}{x\tan\theta - y} = 2v^2\cos^2\theta \\
-\frac{1}{2\cos^2\theta}(\frac{gx^2}{x\tan\theta - y}) = v^2 \\
-\sqrt{\frac{gx^2}{(2\cos^2\theta)x\tan\theta - y}} = v \\
-\frac{x}{\cos\theta}\sqrt{\frac{g}{2(x\tan\theta - y)}} = v \\
+h = (v\sin\theta)(\frac{d}{v\cos\theta}) + \frac{1}{2}g(\frac{d}{v\cos\theta})^2 \\
+(\text{distribute})\implies h = \frac{d v\sin\theta}{v\cos\theta} + \frac{1}{2}g(\frac{d^2}{v^2\cos^2\theta}) \\
+(\text{distribute again})\implies h = \frac{d v\sin\theta}{v\cos\theta} + \frac{g d^2}{2v^2\cos^2\theta} \\
+(\text{cancel } v)\implies h = \frac{d \sin\theta}{\cos\theta} + \frac{g d^2}{2v^2\cos^2\theta} \\
+(\text{apply tan}\theta \text{ identity})\implies h = d\tan\theta + \frac{g d^2}{2v^2\cos^2\theta} \\
+(\text{isolate v on one side})\implies \frac{g d^2}{2v^2\cos^2\theta} = d\tan\theta - h \\
+(\text{solve for v})\implies gd^2 = 2v^2\cos^2\theta(d\tan\theta - h) \\
+\frac{gd^2}{d\tan\theta - h} = 2v^2\cos^2\theta \\
+\frac{1}{2\cos^2\theta}(\frac{gd^2}{d\tan\theta - h}) = v^2 \\
+\sqrt{\frac{gd^2}{(2\cos^2\theta)d\tan\theta - h}} = v \\
+\frac{d}{\cos\theta}\sqrt{\frac{g}{2(d\tan\theta - h)}} = v \\
 $$ 
 \
 **Solution**:
 $$
-v = \frac{x}{\cos\theta}\sqrt{\frac{g}{2(x\tan\theta - y)}}
+v = \frac{d}{\cos\theta}\sqrt{\frac{g}{2(d\tan\theta - h)}}
 $$
 </details>. 
 
