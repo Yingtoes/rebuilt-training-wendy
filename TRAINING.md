@@ -80,11 +80,24 @@ WPILib is the software suite containing all necessary packages and applications 
             - [Aiming The Turret](#aiming-the-turret)
             - [Determining Launch Speed](#determining-launch-speed)
             - [Putting It Together](#putting-it-together)
-
-- [Temporary End](#temporary-end)
+    - [Swerve](#swerve)
+        - [Provided Files](#provided-files)
+        - [Initializing Swerve](#initializing-swerve)
+        - [Swerve Configs](#swerve-configs)
+        - [Swerve Controls](#swerve-controls)
+- [End?](#end)
+    - [Refactoring Exercises](#refactoring-exercises)
+        - [Robot Stow](#robot-stow)
+        - [Enable/Disable Methods](#enabledisable-methods)
+        - [Fixed Shooting](#launcher-assembly)
+        - [Launcher Assembly](#launcher-assembly)
+        - [Field Zoning](#field-zoning)
+            - [Trench Stow](#trench-stow)
+        - [Fuel Unjamming](#fuel-unjamming)
+- [End](#end-1)
 
 ## Attribution
-This file and codebase were written by @spacepotatoes3 and @aatle on GitHub.
+This file and codebase were written by @aatle on GitHub.
 
 *No AI was used to write any parts of this project.*
 
@@ -446,7 +459,7 @@ To implement the method body, use the `get()` method of the motor. After writing
 Now we have defined a way to get the motor speed of the spindexer.
 But this information getter is of little use if we can't access it easily while the robot is running.
 
-##### Sendable Properties
+#### Sendable Properties
 A sendable is something we can *send* over NetworkTables (an FRC communication protocol) to the dashboard. The sendable contains multiple properties, which is the actual numerical or text information shown.
 
 Here, our sendable is the `SpindexerSubsystem`, and the property we want to log is the motor speed.
@@ -560,7 +573,7 @@ Apply the following refactoring:
 
 Don't forget to commit, with commit type `refactor: `.
 
-##### Documentation
+#### Documentation
 The core functionality of the spindexer feature is done for now, but there are a few documentation tasks to do.
 
 First, use Javadoc comments to document methods where necessary, specifically your motor methods. (Javadoc comments are started with `/**` (slash, star, star)).
@@ -930,7 +943,7 @@ deployMotor.setControl(new MotionMagicVoltage(angle));
 
 </details>
 
-##### Adding Safety Limits
+#### Adding Safety Limits
 However, this method is currently unsafe because it doesn't have any safety limits or checks. If someone were to set the angle past the subsystem's mechanical limitations, the intake could break itself.
 
 You should always implement software limits that protect the hardware limits, preventing buggy code from physically breaking the robot.
@@ -1351,7 +1364,7 @@ Now we can start adding turret information to the dashboard. In a new `initSenda
 <details><summary>Your final method should look like this:</summary>
 
 ```java
-@Override
+    @Override
     public void initSendable(SendableBuilder builder) {
         builder.addBooleanProperty(
                 "enabled",
@@ -1376,6 +1389,29 @@ Now we can start adding turret information to the dashboard. In a new `initSenda
 </details>
 
 ### Automatic Targeting
+
+#### WPILib Coordinate Systems
+
+Before we get into targeting, let's talk briefly about the different coordinate systems we'll use. Take a moment to read through and view the diagams at the [WPILib Coordinate System](https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html) page.
+
+WPILib (Robot) Coordinate System:
+- Origin is at the robot's center, flat on the floor
+- +X axis points ahead of the robot (-X points behind)
+- +Y axis points to the robot's left (-Y points right)
+- +Z points up (-Z points down)
+
+Field Coordinate System:
+- Origin is always at blue alliance wall's rightmost corner
+- +X axis points away from the blue alliance wall
+- +Y axis points along the blue alliance wall
+- Note: Alternatively, you could change the definition of your origin based on your alliance. We generally keep the origin at the blue alliance wall because it's easier to understand.
+
+Important takeaways:
+- The positive direction for rotations is **counterclockwise** (written as CCW), and 0 degrees is aligned with the x-axis
+- The robot's coordinate system is *not* the same as the joystick's coordinate system
+- There are multiple ways to define your origin in the field coordinate system
+
+We will revist the joystick/controller coordinate system later.
 
 #### Aiming The Turret
 
@@ -1434,7 +1470,7 @@ In order to simplify our calculations, we will assume the effects of air resista
 
 To solve for launch speed, we'll be looking to relate what we know (vertical and horizontal distances from the launcher to the target) with what we're trying to find (launch speed). The easiest way we can do this is by writing an equation for this relationship, so let's go through how we'll set up the calculations!
 
-It will be much easier to solve for launch speed if we break it up into its horizontal and vertical components, v<sub>x</sub> and v<sub>z</sub>. Think of these components as the legs of a right triangle, with the combined velocity as the hypotenuse; using $\theta\ as our initial launch angle, we can write v<sub>x</sub> and v<sub>z</sub> as:
+It will be much easier to solve for launch speed if we break it up into its horizontal and vertical components, v<sub>x</sub> and v<sub>z</sub>. Think of these components as the legs of a right triangle, with the combined velocity as the hypotenuse; using $\theta$ as our initial launch angle, we can write v<sub>x</sub> and v<sub>z</sub> as:
 $$
 v_x = v\cos\theta \\
 v_z = v\sin\theta
@@ -1470,13 +1506,13 @@ We want to rewrite this equation to fit our specific scenario. Our displacement 
 
 Rewriting the equation:
 $$
-h = v_zt + \frac{1}{2}gt^2
+h = v_zt - \frac{1}{2}gt^2
 $$
 
 Now we have two equations, each modeling the fuel's horizontal and vertical motion:
 $$
 v_x = \frac{d}{t} \\
-h = v_zt + \frac{1}{2}gt^2
+h = v_zt - \frac{1}{2}gt^2
 $$
 
 You'll notice that, in both these equations, we have *two* unknown variables. This means we can't solve for launch speed using only one; we'll have to solve them as a system of equations.
@@ -1496,8 +1532,8 @@ $$
 
 Now we can substitute this expression for t into our vertical motion equation:
 $$
-(\text{original equation})\implies h = v_zt + \frac{1}{2}gt^2 \\
-(\text{substitute in }t = \frac{d}{v_x})\implies h = v_z(\frac{d}{v_x}) + \frac{1}{2}g(\frac{d}{v_x})^2
+(\text{original equation})\implies h = v_zt - \frac{1}{2}gt^2 \\
+(\text{substitute in }t = \frac{d}{v_x})\implies h = v_z(\frac{d}{v_x}) - \frac{1}{2}g(\frac{d}{v_x})^2
 $$
 
 You'll notice that we still have two unknown variables, v<sub>x</sub> and v<sub>z</sub>. Luckily, both can be written in terms of v instead:
@@ -1509,17 +1545,17 @@ $$
 
 Substituting these into our vertical motion equation:
 $$
-h = v_z(\frac{d}{v_x}) + \frac{1}{2}g(\frac{d}{v_x})^2 \\
-(\text{substitute in }v_x \text{ and }v_z)\implies h = (v\sin\theta)(\frac{d}{v\cos\theta}) + \frac{1}{2}g(\frac{d}{v\cos\theta})^2
+h = v_z(\frac{d}{v_x}) - \frac{1}{2}g(\frac{d}{v_x})^2 \\
+(\text{substitute in }v_x \text{ and }v_z)\implies h = (v\sin\theta)(\frac{d}{v\cos\theta}) - \frac{1}{2}g(\frac{d}{v\cos\theta})^2
 $$
 
 All we have to do now is simplify and solve for v!
 $$
-h = (v\sin\theta)(\frac{d}{v\cos\theta}) + \frac{1}{2}g(\frac{d}{v\cos\theta})^2 \\
-(\text{distribute})\implies h = \frac{d v\sin\theta}{v\cos\theta} + \frac{1}{2}g(\frac{d^2}{v^2\cos^2\theta}) \\
-(\text{distribute again})\implies h = \frac{d v\sin\theta}{v\cos\theta} + \frac{g d^2}{2v^2\cos^2\theta} \\
-(\text{cancel } v)\implies h = \frac{d \sin\theta}{\cos\theta} + \frac{g d^2}{2v^2\cos^2\theta} \\
-(\text{apply tan}\theta \text{ identity})\implies h = d\tan\theta + \frac{g d^2}{2v^2\cos^2\theta} \\
+h = (v\sin\theta)(\frac{d}{v\cos\theta}) - \frac{1}{2}g(\frac{d}{v\cos\theta})^2 \\
+(\text{distribute})\implies h = \frac{d v\sin\theta}{v\cos\theta} - \frac{1}{2}g(\frac{d^2}{v^2\cos^2\theta}) \\
+(\text{distribute again})\implies h = \frac{d v\sin\theta}{v\cos\theta} - \frac{g d^2}{2v^2\cos^2\theta} \\
+(\text{cancel } v)\implies h = \frac{d \sin\theta}{\cos\theta} - \frac{g d^2}{2v^2\cos^2\theta} \\
+(\text{apply tan}\theta \text{ identity})\implies h = d\tan\theta - \frac{g d^2}{2v^2\cos^2\theta} \\
 (\text{isolate v on one side})\implies \frac{g d^2}{2v^2\cos^2\theta} = d\tan\theta - h \\
 (\text{solve for v})\implies gd^2 = 2v^2\cos^2\theta(d\tan\theta - h) \\
 \frac{gd^2}{d\tan\theta - h} = 2v^2\cos^2\theta \\
@@ -1542,6 +1578,43 @@ Here are some guidelines:
 - Your methods should use both robot and hub positions to calculate yaw/launch speed
 - Detailed field dimensions (like hub position\height) can be found [here](https://firstfrc.blob.core.windows.net/frc2026/FieldAssets/2026-field-dimension-dwgs.pdf)
 
+You will also need to convert launch speed (m/s) to flywheel speed (rad/s). 
+
+To do this during the season, we did the following:
+1. Recorded data on the relationship between angular velocity (flywheel speed), hood pitch, and distance fuel was launched.
+2. Used physics equations (similar to our displacement equation from earlier!) to calculate the fuel's launch speed (linear, not angular) from our data.
+3. Paste the flywheel speed vs. derived launch speed values into desmos and use the graphing calculator to create a model.
+4. Write a function that that takes flywheel speed and outputs launch speed.
+5. Use algebra to rewrite this function to take launch speed and output flywheel speed.
+5. Use this function to write a method that converts launch speed to flywheel speed for use in trajectory calculations.
+
+If you would like to see how we did this or even derive the function yourself, reference [this spreadsheet](https://docs.google.com/spreadsheets/d/1ikj5bX7SY8jNR-cuvEb0MiDeYYPRW5mI0ULnZ-wY4e0/edit?usp=sharing).
+
+You can use the following method in your own flywheel speed calculations:
+
+<details><summary>Open this!</summary>
+
+```java
+// Model coefficients:
+public static final double MODEL_C1 = 18.18081;
+public static final double MODEL_C2 = 9.66252;
+public static final double MODEL_C3 = 1.21679;
+public static final double MODEL_C4 = 0.00849423;
+public static final double MODEL_C5 = -2.4087;
+
+
+/** Estimate the flywheel speed given a launch speed (m/s) and field launch pitch (rad). */
+public static double estimateFlywheelSpeed(double launchSpeed, double launchPitch) {
+    return (Math.log(
+                            (MODEL_C1 + MODEL_C2 * launchPitch) / launchSpeed
+                                    - MODEL_C3 * launchPitch
+                                    - 1)
+                    + MODEL_C5)
+            / -MODEL_C4;
+}
+```
+</details>
+
 #### Putting it Together
 
 Next, we'll implement these methods in `Robot.java` to make the robot automatically aim and shoot when in teleoperated mode.
@@ -1562,5 +1635,225 @@ Now that we can get this command more conveniently, let's add it to the robot. W
 
 We want to schedule our automatic aiming command so that it is run every time `robotPeriodic()` is called. Do this using the line `CommandScheduler.getInstance().schedule()` to schedule your targeting command before running all scheduled commands. 
 
-## Temporary End
-The rest of training is being actively written.
+### Swerve
+
+Our subsystems our finished, but we've neglected a very important part of our robot; the drivetrain. We want our robot to drive safely and in a way that's intuitive for the driver, which means we'll have to do some extra setup (similar to our subsystem config files).
+
+Note: You will often hear "swerve", "drivetrain", and "swerve drive" used interchangeably during the season. They all refer to the part of our robot that drives it around.
+
+#### Provided Files
+
+To start, let's see what's been provided for you. Take a look through `CommandSwerveDrivetrain.java` in the `drivetrain` folder. You'll see a number of `SysIdRoutine` objects for different types of swerve movement; all you need to know about `SysIdRoutine` is that it helps us determine the relationship between motor voltage and our desired velocity/acceleration. In other words, it collects data makes the swerve run smoother.
+
+If you would like to read more about `SysIdRoutine`, see the WPILib [Intro to System Identification](https://docs.wpilib.org/en/stable/docs/software/advanced-controls/system-identification/introduction.html) page.
+
+A few other important things happen in `CommandSwerveDrivetrain.java`:
+- `configureAutoBuilder()` passes on drivetrain info to the `AutoBuilder` class that will allow it to accurately control and read values from our drivetrain during autonomous routines.
+- `addVisionMeasurement()` corrects the robot's position (from odometry) based on where the vision subsystem thinks it is.
+
+Also open `TunerConstants.java`. This file stores our swerve motor configurations, PID values (we'll talk about these later), and any other physical specifications of the drivetrain that will help us control it more accurately.
+
+Now that we've looked through the files provided for you, let's get started!
+
+#### Initializing Swerve
+
+In `Robot.java`, create a new `CommandSwerveDrivetrain` object to initialize your drivetrain. Hover over the constructor to see its parameters; a `SwerveDrivetrainConstants` object (constants that apply to the entire drivetrain) and multiple `SwerveModuleConstants` objects (constants that apply to speciifc modules of the drivetrain).
+
+For our first parameter, we'll pass in the `DrivetrainConstants` field from `TunerConstants.java`. For the modules, we'll use the four `SwerveModuleConstants` values also saved in `TunerConstants.java` (`FrontLeft`, `BackRight`, etc). They should be passed in with the following order: `FrontLeft`, `FrontRight`, `BackLeft`, `BackRight`.
+
+We have a drivetrain now, but there are still some steps to take before it can be used.
+
+#### Swerve Configs
+
+Similar to our motors, there are some values we want to save and tune on the drivetrain (aside from the ones in `TunerConstants.java`). Create a new file in the `drivetrain` folder called `DriveConfig.java`.
+
+First, declare a field called to store your drive controller's port, and call this constant from `Robot.java` instead of using the value directly.
+
+Also create a field to track whether or not driving is enabled, similar to the `enabled` property in `ShooterSubsystem.java`.
+
+We want to store the drivetrain's maximum speeds in this file as well. Create a new field, `maxSpeed`, and initialize it to a value of `3` meters per second.
+
+This is our maximum *linear* speed (for how fast we move around the field), but we should have a separate constant for our maximum *angular* speed (how fast we should rotate the robot). Initialize this to `0.75` rotations per second.
+
+We also want to set a **deadband** value for our swerve drive. A deadband is a specific threshold we set where, if our joystick input is below this threshold, we round the input down to 0 (the drivetrain won't move at all).
+
+This is useful because, in practice, we don't want the drivetrain to react to every tiny movement of the joystick. Without a deadband, our drivetrain would move anytime the joysticks aren't centered at absolute zero - causing unnecessary twitches or rotation when we don't want movement at all. 
+
+To start, let's set a constant for our *general deadband fraction*. This will store the fraction of the drivetrain's maximum speed (linear or angular) that we want it to start registering input at. Setting this fraction to `0.5`, for example, would mean our swerve should only start moving once the joystick input translates to over half of our maximum speed. Generally speaking, this value should range from  `0.05` to `0.1`, or 5-10% of the maximum; we'll set it to `0.1` to start. 
+
+Now, create two fields to store our linear speed deadband and angular speed deadband. They should both be set to your general deadband fraction multiplied by their respective maximum speeds.
+
+#### Swerve Controls
+
+Most of the drivetrain has already been set up for you, except controls. 
+
+Take a look at the `CommandSwerveDrivetrain.java`
+
+In our case, the left joystick will handle moving around the field and the right joystick will handle rotation.
+
+From each joystick, we can retrieve a current x axis value and y axis value. The x axis value corresponds to how far left or right we push the joystick, and the y axis value to how far up or down. Together, they give us the "coordinates" of the joystick's current position.
+
+Because multiple joystick inputs are more complicated to process than a button press, we'll create a separate method in `Robot.java` to handle swerve motion. Our new method will take in the current joystick positions and return a `SwerveRequest` that tells the drivetrain how to move (this will be built off of the `SwerveRequest.FieldCentric` object we made in `DriveConfig.java`). 
+
+Your parameters will be three throttle values (`double`s): `xThrottle`, `yThrottle`, and `rotThrottle`. The x and y throttles indicate how fast we want the swerve to move in either direction. The rotation throttle represents how fast we want to rotate and in what direction.
+
+Before we move anything, check to see if driving is enabled. If not, return a new `SwerveRequest.Idle` object (tells the swerve not to move). 
+
+
+Otherwise, we'll make a new `SwerveRequest` object that will tell the swerve how we want it to move (based on our configs and controller input).
+
+Create and initialize a new `SwerveRequest.FieldCentric` object. The `.FieldCentric` indicates that we want our joystick directions to be set relative to the field, not the robot (ex. pushing the joystick up will move the robot in the +x direction on the field regardless of its rotation). 
+
+After your constructor call, call 3 methods on this object to modify its properties:
+`.withDeadband()`
+`.withRotationalDeadband()`
+`.withDriveRequestType()`
+
+Pass in the deadbands you declared in `DriveConfig.java` for the first two. In `.withDriveRequestType()`, pass `DriveRequestType.Velocity` in as a parameter. We want to control our drive motor by passing in velocity values (as opposed to voltage).
+
+Similar to the `onTrue()` from earlier, each one of these methods return the object being modified, so they can be chained one after the other.
+
+Next, we'll apply the throttle values from the joystick to make the drivetrain move. Call the following methods on your swerve request:
+`.withVelocityX()`
+`.withVelocityY()`
+`.withRotationalRate()`
+
+For each method, your parameter should be equal to the drivetrain's maximum (linear or angular) speed times the correct throttle value. Return this swerve request.
+
+Now we can bind the joystick!
+
+Find your `initBindings()` method from earlier.
+
+Unlike the bumpers or d-pad, the joysticks don't have a method that can be called on the driver controller to return their directional input (there are `controller.leftStick()` and `controller.rightStick()` methods, but those are meant for a joystick press). Instead, we'll use methods like `controller.getLeftX()` (retrieves the x-axis value from the controller's left joystick).
+
+To start, we'll call `drivetrain.setDefaultCommand()`. This will make it so the command passed into the method is scheduled by default (when the subsystem is not busy with something else). It would be a good idea for our drivetrain's default command to be driving.
+
+Next, we'll call `drivetrain.applyRequest()`. This method takes in a `SwerveRequest` and returns it as a `Command` object, which is exactly what we need here.
+
+Lastly, use a lambda expression to pass in your `getSwerveRequest()` method from earlier. Use the controller methods `getLeftX()`, `getLeftY()`, and `getRightX()` to retrieve the correct joystick axis values for the request.
+
+Remember: the joystick coordinate system does not operate the same as the robot's! We will have to make some changes to the values we pass into the swerve request so it doesn't drive in entirely the wrong direction.
+
+Joystick inputs are considered rotations about an axis, not translations. This means that if we push forward on the joystick (in the +X) direction, the joystick will consider it a clockwise (CW) rotation about its y-axis and therefore a negative y value.
+
+See the WPILib [Coordinate System](https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html) page for a diagram and more detailed explanation. There is also a useful example of how these changes affect swerve drivetrain movement.
+
+Once this is set, our drivetrain is ready to drive!
+
+## End?
+
+Congratulations, you've reached the end of the advanced training preprogramming portion… kind of.
+
+You've programmed every subsystem on the robot and the drivetrain, bound commands to controller buttons, and even created an automatic targeting algorithm. But really, this is the *bare minimum*. 
+
+Sure, our robot functions, but that doesn't mean we can't make it better. In any programming project you work on for this team (and in general!) you should always seek to improve what you've written even after it's "done".
+
+With that in mind, the last section of preprogramming will be refactoring exercises. Some are very simple to implement, others require a bit more problem solving. All of these are based on real changes we made to the robot last season.
+
+It's okay to stop preprogramming here, but we *highly, highly* recommend you work through at least a few of the refactoring exercises outlined for you below; they're great practice for the season, where you will be constantly updating the codebase with new features or improvements on old ones.
+
+Once you've done your refactoring exercises, you are finished with preprogramming and can move on to testing with the physical robot!
+
+### Refactoring Exercises
+
+#### Robot Stow
+
+During a match, there could be times when we want to stow all subsystems on the robot (ex. when we're playing aggressive defense and want to make sure the robot components are as protected as possible). It would be a good idea for this action to have its own controller binding.
+
+In `Robot.java`, create a method to stop and stow all subsystems.
+
+We want to bind our new stow method to the controller's start button (using `controller.start()`). When this button is pressed, we want to run our collective stow method using the `Commands.run()` method. We use this instead of `runOnce()` because it will continue to call the stow method until interrupted (one of the subsystems receives another command). Most frequently, stowing will be for longer periods of time and needs more than a one-and-done command. Make sure you pass in each subsystem as a requirement.
+
+We also want to be able to run our stow command while the robot is disabled. This means that we can press the start button while the robot is disabled to schedule the command, and it will be run as soon as the robot is enabled again. This is useful if the robot is currently in an unsafe position and we want to get it back to a safe position (stow) immediately upon enabling. After your `Commands.run()` method, call the `ignoringDisable()` to set the command to run while the robot is enabled.
+
+#### Enable/Disable Methods
+
+When testing, it can be useful to have a "toggle" that enables or disables certain subsystems; if we're testing the feeder, for example, we might not want the rest of the launcher assembly to be running at the same time.
+
+We implemented this in our shooter subsystem, but it would be nice to have an `enabled` property on each subsystem (and a way to update that value from the dashboard). Add that to the other subsystems now.
+
+#### Fixed Shooting
+
+If our automatic targeting is not working or something unexpected happens during a match, we want to have a backup plan short of disabling the entire launcher. This is where fixed shooting comes in, essentially "locking" the hood pitch, turret yaw, and shooter speed to constant values. This leaves it up to the driver to aim with the swerve instead of the turret and adjust to an appropriate distance.
+
+Similar to your automatic targeting command/binding, make it so holding the controller's right bumper activates fixed shooting.
+
+#### Launcher Assembly
+
+Instead of treating the feeder, hood, shooter, and turret subsystems as entirely separate from one another, we can organize them as part of the *launcher assembly* in our codebase.
+
+Create a separate file in the `launcher` folde called `LauncherAssembly.java`. We can initialize our subsytems here instead of in `Robot.java`.
+
+Now that our subsystems are here, we can create convenience methods for the launcher as a whole (referencing multiple subsystems). A few you should consider creating are:
+- A launcher stow method
+- A method to aim the hood and turret together (given yaw and pitch)
+- A method for fixed shooting
+
+Some fields you can add here (or in a separate launcher constants file) are:
+- The launcher `CANBus`
+- The robot to launcher transform
+
+Note that these specific changes are not *required*; you can pick and choose what makes sense to you, or go a competely different route with these exercises.
+
+#### Field Zoning
+
+For more advanced targeting and extra features, we want the robot to know what zone of the playing field its in (alliance zone, neutral zone, trench zone, etc). Since we have the robot's pose at its origin and a map of field dimensions, this just comes down to math (yay!)
+
+Create a new folder called `field` in the codebase. To start, let's store the constants we'll need (robot and field related) to perform the relevant calculations.
+
+Picture the playing field as a coordinate plane split into different regions (mostly with vertical lines, or specific x-axis values). If we want to know when the robot is in a specific region, we need to figure out the "threshold" between two different areas of the field.
+
+Let's start by defining where the blue alliance zone, neutral zone, and red alliance zone are.
+
+Consult the the [2026 field dimensions](https://firstfrc.blob.core.windows.net/frc2026/FieldAssets/2026-field-dimension-dwgs.pdf) page and the [2026 game manual](https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf) (Section 5.3: Areas, Zones, and Markings) to find these values and store them as constants. We will also want to save the length and width of the entire field.
+
+According to FIRST, a robot is considered within an alliance zone if any part of it (including bumpers!) is within that zone. This means we can't just consider the robot's pose, which gives its center; we have to take its length into account as well.
+
+Create another constant to store the robot's full length, including bumpers. The drivebase is 27in long, and each bumper side is 4.75in thick. Save this constant in a way that the drivebase/bumper thickness can be modified easily, should they change later.
+
+Also create a constant to store *half* the full robot length, used when measuring from the robot's origin to the end of the bumper. We will have to add this value to our robot pose to determine what zone it's in.
+
+<details><summary> Bonus Challenge </summary>
+.
+
+If our robot never rotated, determining which zone it's in would be as simple as combining the current pose with the halved robot length to determine whether the bumpers cross certain thresholds. Unfortunately for us, our robot will almost always have a nonzero rotation.
+
+The challenge here is to find a mathematical expression that relates the robot's rotation to how far the maximum bumper extension will be along each axis. Unlike our trajectory math, you won't be given an explicit framework for this. Have fun!
+
+Once you've found an expression, use it to create a method that takes in robot rotation and returns how far the robot's bumpers extend (relative to the coordinate axes) from its origin.
+
+Using this general method, create mutliple methods that retrieve the robot's minimum and maximum extensions in both the x and y direction. These are the updated methods we'll use to determine what zone it's in.
+</details>
+.
+
+Now we can create methods to determine if the robot is in each alliance zone. Create 3 methods (for blue alliance zone, red alliance zone, and neutral zone respectively) that will evaluate if the robot is in the given zone and return a corresponding boolean value.
+
+Note: If the robot is not in the blue alliance zone or the red alliance zone, it is considered to be in the neutral zone.
+
+Using these methods, let's add one more that evaluates if the robot is in its own alliance zone (to determine whether or not to shoot into the hub). Use the `DriverStation.getAlliance()` method.
+
+##### Trench Stow
+
+Something additional we can implement with field zoning is putting the launcher in stow automatically when it moves under the trench (to prevent damange due to driver error).
+
+To start, let's set a threshold for how close to the trench we think the robot should automatically move into stow. Since it takes time to get into the stow position and our robot could be moving at high speeds during the match, this should be as generous a threshold as we can give (without interfering with our ability to shoot).
+
+We also only want to stow if the robot is near the trench opening (not, for example, up against the hub.) 
+
+With this in mind, create a method that returns whether or not the robot is near the trench (in front of the opening and within our threshold).
+
+In `Robot.java`, periodically check if the robot is close to the trench. If it is, schedule a command that stows the launcher. Right after you declare the command (ideally with `Commands.runOnce()`), add a call to the `.withInterruptBehavior()` method. We will use this additional property if we have an "urgent" command that needs to be run immediately. Pass in `InterruptionBehavior.kCancelIncoming` as your parameter, which allows this command to cancel other commands currently using its subsystem requirements so it can be run.
+
+#### Fuel Unjamming
+
+During a match, fuel may get jammed in the intake or feeder and prevent us from shooting. Since we can't run onto the field and pull fuel out mid-match, we'll have to program a way for the robot to unjam itself for both problem spots; intake and feeder.
+
+In `Robot.java`, create a method to return a command that tries to unjam intake. Your command should move the intake up to stowed position and run the rollers in reverse to (hopefully) eject the jammed fuel.
+
+Also create a method to unjam the feeder. This should return a command that runs the feeder and spindexer in reverse (and stops both when the command is finished).
+
+## End
+
+Congrats, this is the real end :D
+
+Go test your robot now!
