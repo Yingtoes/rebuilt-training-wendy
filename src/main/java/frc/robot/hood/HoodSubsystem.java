@@ -47,6 +47,10 @@ public class HoodSubsystem extends SubsystemBase {
         return motor.getPosition().getValue();
     }
 
+    public void moveToShoot() {
+        moveHoodPitch(HoodConst.SHOOTER_ANGLE);
+    }
+
     @Override
     public void initSendable(SendableBuilder builder) {
         builder.addDoubleProperty("hood pitch(Rotation)", () -> getPitch().in(Rotations), null);
