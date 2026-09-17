@@ -2,5 +2,5 @@ package frc.robot.spindexer;
 
 public class SpindexerConst {
 
-    public static int MOTOR_ID = -1; // TODO
+    public static int MOTOR_ID = 11;
 }

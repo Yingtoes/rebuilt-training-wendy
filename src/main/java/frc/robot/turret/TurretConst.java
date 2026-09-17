@@ -5,8 +5,8 @@ import static edu.wpi.first.units.Units.Degrees;
 import edu.wpi.first.units.measure.Angle;
 
 public class TurretConst {
-    public static int MOTOR_ID = -1; // TODO
-    public static int ENCODER_ID = -1; // TODO
+    public static int MOTOR_ID = 16;
+    public static int ENCODER_ID = 17;
     public static Angle MAX_ANGLE = Degrees.of(180);
     public static Angle MIN_ANGLE = Degrees.of(-270);
     public static Angle STOW_ANGLE = Degrees.of(0);
