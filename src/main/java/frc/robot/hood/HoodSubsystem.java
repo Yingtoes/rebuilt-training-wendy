@@ -16,6 +16,8 @@ public class HoodSubsystem extends SubsystemBase {
 
     public HoodSubsystem() {
         motor.getConfigurator().apply(HoodConfig.motorConfig);
+        targetPitch = HoodConst.MAX_ANGLE;
+        motor.setPosition(targetPitch);
     }
 
     /**
