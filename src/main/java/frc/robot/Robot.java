@@ -23,6 +23,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 import frc.robot.drivetrain.CommandSwerveDrivetrain;
 import frc.robot.drivetrain.DriveConfig;
+import frc.robot.drivetrain.TunerConstants;
 import frc.robot.feeder.FeederSubsystem;
 import frc.robot.hood.HoodConst;
 import frc.robot.hood.HoodSubsystem;
@@ -40,7 +41,13 @@ public class Robot extends TimedRobot {
     private final HoodSubsystem hood = new HoodSubsystem();
     private final ShooterSubsystem shooter = new ShooterSubsystem();
     private final TurretSubsystem turret = new TurretSubsystem();
-    private final CommandSwerveDrivetrain drivetrain = new CommandSwerveDrivetrain(null, null);
+    private final CommandSwerveDrivetrain drivetrain =
+            new CommandSwerveDrivetrain(
+                    TunerConstants.DrivetrainConstants,
+                    TunerConstants.FrontLeft,
+                    TunerConstants.FrontRight,
+                    TunerConstants.BackLeft,
+                    TunerConstants.BackRight);
     private final CommandXboxController controller =
             new CommandXboxController(DriveConfig.CONTROLLER_PORT);
 
