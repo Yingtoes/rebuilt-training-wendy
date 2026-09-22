@@ -19,6 +19,7 @@ public class IntakeSubsystem extends SubsystemBase {
         deployMotor.getConfigurator().apply(IntakeConfig.deployMotorConfig);
         rollerMotor.getConfigurator().apply(IntakeConfig.rollerMotorConfig);
         deployMotor.setPosition(IntakeConst.MAX_ANGLE);
+        targetAngle = IntakeConst.MAX_ANGLE;
     }
 
     /**
