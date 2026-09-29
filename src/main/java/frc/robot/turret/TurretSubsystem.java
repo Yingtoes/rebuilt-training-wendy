@@ -18,7 +18,7 @@ public class TurretSubsystem extends SubsystemBase {
     public TalonFX motor = new TalonFX(TurretConst.MOTOR_ID, HoodConst.LAUNCHER_CANBUS);
     public CANcoder encoder = new CANcoder(TurretConst.ENCODER_ID);
 
-    public Angle targetYaw;
+    public Angle targetYaw = Rotations.of(0);
     public boolean enabled;
 
     public TurretSubsystem() {

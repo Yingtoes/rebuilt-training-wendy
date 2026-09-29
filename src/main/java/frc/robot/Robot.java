@@ -62,6 +62,7 @@ public class Robot extends TimedRobot {
         SmartDashboard.putData("Feeder", feeder);
         SmartDashboard.putData("Hood", hood);
         SmartDashboard.putData("Shooter", shooter);
+        SmartDashboard.putData("Turret", turret);
     }
 
     public void initBindings() {
