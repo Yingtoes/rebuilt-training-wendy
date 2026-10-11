@@ -12,5 +12,5 @@ public class HoodConst {
     public static Angle MAX_ANGLE = Degrees.of(73.606);
     public static Angle MIN_ANGLE = Degrees.of(0);
     public static Angle SHOOTER_ANGLE = Degrees.of(60);
-    public int ROTOR_TO_MECHANISM = 24;
+    public static int ROTOR_TO_MECHANISM = 24;
 }

@@ -28,6 +28,6 @@ public class TurretConfig {
 
     static {
         encoderConfig.MagnetSensor.MagnetOffset = -0.444;
-        encoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive;
+        encoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue.CounterClockwise_Positive;
     }
 }

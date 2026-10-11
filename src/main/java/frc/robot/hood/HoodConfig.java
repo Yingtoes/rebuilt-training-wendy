@@ -12,5 +12,6 @@ public class HoodConfig {
         motorConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         motorConfig.CurrentLimits.StatorCurrentLimit = STATOR_CURRENT_LIMIT;
         motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        motorConfig.Feedback.SensorToMechanismRatio = HoodConst.ROTOR_TO_MECHANISM;
     }
 }

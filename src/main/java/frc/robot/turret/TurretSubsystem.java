@@ -22,8 +22,9 @@ public class TurretSubsystem extends SubsystemBase {
     public boolean enabled;
 
     public TurretSubsystem() {
-        motor.getConfigurator().apply(TurretConfig.motorConfig);
         encoder.getConfigurator().apply(TurretConfig.encoderConfig);
+        motor.getConfigurator().apply(TurretConfig.motorConfig);
+        encoder.setPosition(targetYaw);
     }
 
     /** enables */
